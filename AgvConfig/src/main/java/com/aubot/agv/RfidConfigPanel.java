@@ -6,20 +6,13 @@ package com.aubot.agv;/*
 import com.aubot.agv.attributes.*;
 
 import javax.swing.*;
-import javax.swing.event.CellEditorListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableCellEditor;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.PlainDocument;
-import java.awt.*;
 import java.io.IOException;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.EventObject;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -30,6 +23,7 @@ import java.util.regex.Pattern;
 public class RfidConfigPanel extends javax.swing.JFrame {
     List<RfidProperties> rfidPropertiesList = new ArrayList<>();
     private RfidPropTableModel tableModel;
+    private RfidMapAttribute rfidMapAttribute;
     /**
      * Creates new form MainConfig
      */
@@ -39,7 +33,6 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         this.setLocationRelativeTo(null);
         validateTable();
     }
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -60,20 +53,17 @@ public class RfidConfigPanel extends javax.swing.JFrame {
             }
         });
 
-        btn_Config.addActionListener(l -> {
+
+        btnDone.addActionListener(l -> {
             List<RfidProperties> rfidProperties = tableModel.getRfidPropList();
             rfidProperties.remove(rfidProperties.size()-1);
-            Attribute<List<RfidProperties>> rfidMapAttribute = AttributeFactory.createAttribute(AgvAttribute.RFID_MAP);
+            rfidMapAttribute = (RfidMapAttribute) AttributeFactory.createAttribute(AgvAttribute.RFID_MAP);
             if (rfidMapAttribute == null){
                 return;
             }
             rfidMapAttribute.setValue(rfidProperties);
-            try {
-                byte[] bytes = rfidMapAttribute.encode();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
 
+            this.dispose();
         });
     }
 
@@ -82,6 +72,10 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         limitCharacters(textField, 4);
         tblRfidProp.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(textField));
 
+    }
+
+    public RfidMapAttribute getRfidMapAttribute(){
+        return rfidMapAttribute;
     }
 
     private void limitCharacters(JTextField textField, final int limit) {
@@ -121,7 +115,7 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
         lblTitleTable = new javax.swing.JLabel();
         buttonPanel = new javax.swing.JPanel();
-        btn_Config = new javax.swing.JButton();
+        btnDone = new javax.swing.JButton();
         scrollTablePanel = new javax.swing.JScrollPane();
         tblRfidProp = new javax.swing.JTable();
 
@@ -132,8 +126,8 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         lblTitleTable.setToolTipText("");
         getContentPane().add(lblTitleTable, java.awt.BorderLayout.PAGE_START);
 
-        btn_Config.setText("Config");
-        buttonPanel.add(btn_Config);
+        btnDone.setText("Done");
+        buttonPanel.add(btnDone);
 
         getContentPane().add(buttonPanel, java.awt.BorderLayout.PAGE_END);
 
@@ -146,7 +140,7 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btn_Config;
+    private javax.swing.JButton btnDone;
     private javax.swing.JLabel lblTitleTable;
     private javax.swing.JPanel buttonPanel;
     private javax.swing.JScrollPane scrollTablePanel;

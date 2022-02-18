@@ -42,6 +42,7 @@ public class ConfigurationFrame extends javax.swing.JFrame {
 
     SerialPort port;
     JButton btnRfidConfig = new JButton("Rfid Config");
+    RfidConfigPanel rfidConfigPanel = new RfidConfigPanel();
 
     /** Creates new form ConfigurationFrame */
     public ConfigurationFrame() {
@@ -190,6 +191,8 @@ public class ConfigurationFrame extends javax.swing.JFrame {
                             .map(ConfigurationPanel::getAttribute)
                             .filter(attr -> attr.getValue() != null)
                             .collect(Collectors.toList());
+                    Attribute attribute = rfidConfigPanel.getRfidMapAttribute();
+                    attributes.add(attribute);
                     for (int i = 0; i < attributes.size(); i++) {
                         agvDevice.setAttribute(attributes.get(i));
                         process(Arrays.asList(i + 1, attributes.size()));
@@ -216,8 +219,10 @@ public class ConfigurationFrame extends javax.swing.JFrame {
         });
 
         btnRfidConfig.addActionListener(e -> {
-            new RfidConfigPanel().setVisible(true);
+            rfidConfigPanel = new RfidConfigPanel();
+            rfidConfigPanel.setVisible(true);
         });
+
     }
 
     private void handleError(Exception ex) {
@@ -295,18 +300,17 @@ public class ConfigurationFrame extends javax.swing.JFrame {
 
         configurationPanels.values().forEach(pnlConfigs::add);
 
-        rfidConfigPanel =  new JPanel();
-        rfidConfigPanel.setLayout(new GridBagLayout());
+        configurationRfidPanel =  new JPanel();
+        configurationRfidPanel.setLayout(new GridBagLayout());
         GridBagConstraints g = new GridBagConstraints();
         JLabel lblConfig = new JLabel("Config Rfid: ");
         g.weightx = 1;
-        rfidConfigPanel.add(lblConfig,g);
+        configurationRfidPanel.add(lblConfig,g);
         g.gridx = 1;
         g.weightx = 3;
-        rfidConfigPanel.add(btnRfidConfig,g);
+        configurationRfidPanel.add(btnRfidConfig,g);
 
-        pnlConfigs.add(rfidConfigPanel);
-
+        pnlConfigs.add(configurationRfidPanel);
 
     }
 
@@ -432,7 +436,7 @@ public class ConfigurationFrame extends javax.swing.JFrame {
     private javax.swing.JProgressBar processBar;
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JToggleButton tgbConnect;
-    private JPanel rfidConfigPanel;
+    private JPanel configurationRfidPanel;
     // End of variables declaration//GEN-END:variables
 
 }
