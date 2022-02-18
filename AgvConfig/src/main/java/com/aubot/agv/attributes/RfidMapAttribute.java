@@ -25,7 +25,7 @@ public class RfidMapAttribute extends Attribute<List<RfidProperties>> {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputStream.write((byte) value.size());
         for(RfidProperties rfidProp : value){
-            int id = Integer.parseInt(rfidProp.getId().substring(1));
+            int id = rfidProp.getId();
             int extraCard = rfidProp.isExtraCards() ? 1 : 0;
             int exConnection = rfidProp.isExConnection() ? 1 : 0;
             int timeStop = rfidProp.getStopTime();

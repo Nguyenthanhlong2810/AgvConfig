@@ -1,13 +1,13 @@
 package com.aubot.agv.attributes;
 
 public class RfidProperties {
-    private String id;
+    private int id;
     private boolean extraCards;
     private boolean exConnection;
     private int stopTime;
     private int connWaitingTime;
 
-    public RfidProperties(String id, boolean extraCards, boolean exConnection, int stopTime, int connWaitingTime) {
+    public RfidProperties(int id, boolean extraCards, boolean exConnection, int stopTime, int connWaitingTime) {
         this.id = id;
         this.extraCards = extraCards;
         this.exConnection = exConnection;
@@ -16,14 +16,13 @@ public class RfidProperties {
     }
 
     public RfidProperties() {
-        this.id = "O";
     }
 
-    public String getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
     }
 

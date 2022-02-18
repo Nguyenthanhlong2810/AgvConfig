@@ -3,35 +3,47 @@ package com.aubot.agv;/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 
-import com.aubot.agv.attributes.*;
+import com.aubot.agv.attributes.AgvAttribute;
+import com.aubot.agv.attributes.AttributeFactory;
+import com.aubot.agv.attributes.RfidMapAttribute;
+import com.aubot.agv.attributes.RfidProperties;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DocumentFilter;
-import javax.swing.text.PlainDocument;
-import java.io.IOException;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  *
  * @author long2
  */
 public class RfidConfigPanel extends javax.swing.JFrame {
+    public static final int RFID_ID_COLUMN = 0;
+    public static final int EXTRA_CARD_COLUMN = 1;
+    public static final int EX_CONNECT_COLUMN = 2;
+    public static final int STOP_TIME_COLUMN = 3;
+    public static final int TIME_WAIT_COLUMN = 4;
     List<RfidProperties> rfidPropertiesList = new ArrayList<>();
     private RfidPropTableModel tableModel;
     private RfidMapAttribute rfidMapAttribute;
+    private JPopupMenu pm;
+    private int selectedRow = -1;
     /**
      * Creates new form MainConfig
      */
     public RfidConfigPanel() {
         initComponents();
         setTableComponents();
+        setTableEditor();
+        createPopupMenu();
         this.setLocationRelativeTo(null);
-        validateTable();
+        this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        this.setSize(600,400);
     }
     /**
      * This method is called from within the constructor to initialize the form.
@@ -41,21 +53,26 @@ public class RfidConfigPanel extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
 
     private void setTableComponents() {
+        lblTitleTable.setFont(new Font("Serif", Font.PLAIN, 20));
         tableModel = new RfidPropTableModel(rfidPropertiesList);
         tblRfidProp.setModel(tableModel);
         tblRfidProp.setShowGrid(true);
 
         tableModel.addTableModelListener(e -> {
-            if ((e.getLastRow() + 1) == tableModel.getRowCount()) {
-                if (!tableModel.getValueAt(tableModel.getRowCount() - 1, 0).equals("")) {
+            if ((e.getFirstRow() + 1) == tableModel.getRowCount()) {
+                if (!tableModel.getValueAt(tableModel.getRowCount() - 1, RFID_ID_COLUMN).equals(0)) {
                     tableModel.addRfidProperty(new RfidProperties());
                 }
             }
         });
 
-
         btnDone.addActionListener(l -> {
             List<RfidProperties> rfidProperties = tableModel.getRfidPropList();
+            boolean isDuplicate = findDuplicates(rfidProperties);
+            if(isDuplicate){
+                JOptionPane.showMessageDialog(this,"Duplicate RFID!","Duplicate RFID",JOptionPane.ERROR_MESSAGE);
+                return;
+            }
             rfidProperties.remove(rfidProperties.size()-1);
             rfidMapAttribute = (RfidMapAttribute) AttributeFactory.createAttribute(AgvAttribute.RFID_MAP);
             if (rfidMapAttribute == null){
@@ -65,49 +82,70 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
             this.dispose();
         });
+
+        tblRfidProp.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                JTable tableModel = (JTable) e.getSource();
+                selectedRow = tableModel.rowAtPoint(e.getPoint());
+                if(e.getButton() == 3 && selectedRow >= 0){
+                    pm.show(tblRfidProp, e.getX(), e.getY());
+                }else {
+                    selectedRow = -1;
+                }
+            }
+        });
     }
 
-    private void validateTable(){
-        JTextField textField = new JTextField();
-        limitCharacters(textField, 4);
-        tblRfidProp.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(textField));
-
+    private void setTableEditor(){
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
+        tblRfidProp.setDefaultRenderer(Object.class, centerRenderer);
+        tblRfidProp.getColumnModel().getColumn(RFID_ID_COLUMN).setCellRenderer(new R4RfidTableCellRenderer());
+        tblRfidProp.getColumnModel().getColumn(RFID_ID_COLUMN).setCellEditor(new UInt32CellEditor(3));
+        tblRfidProp.getColumnModel().getColumn(STOP_TIME_COLUMN).setCellEditor(new UInt32CellEditor(9));
+        tblRfidProp.getColumnModel().getColumn(TIME_WAIT_COLUMN).setCellEditor(new UInt32CellEditor(9));
     }
+
+    private void createPopupMenu(){
+        pm = new JPopupMenu();
+
+        JMenuItem m1 = new JMenuItem("Delete");
+        JMenuItem m2 = new JMenuItem("Duplicate");
+        pm.add(m1);
+        pm.addSeparator();
+        pm.add(m2);
+
+        m1.addActionListener(e -> removeRfid(selectedRow));
+
+        m2.addActionListener(e -> duplicateRfid(selectedRow));
+    }
+
+    private void removeRfid(int selectedRow){
+        rfidPropertiesList.remove(selectedRow);
+        if(rfidPropertiesList.size() == 0){
+            tableModel.addRfidProperty(new RfidProperties());
+        }
+        tableModel.fireTableDataChanged();
+    }
+
+    private void duplicateRfid(int selectedRow){
+        RfidProperties rp = rfidPropertiesList.get(selectedRow);
+        RfidProperties dupRfid = new RfidProperties(rp.getId(),rp.isExtraCards(),rp.isExConnection(),rp.getStopTime(),rp.getConnWaitingTime());
+        rfidPropertiesList.add(dupRfid);
+        tableModel.fireTableDataChanged();
+    }
+
 
     public RfidMapAttribute getRfidMapAttribute(){
         return rfidMapAttribute;
     }
 
-    private void limitCharacters(JTextField textField, final int limit) {
-        PlainDocument document = (PlainDocument) textField.getDocument();
+    public boolean findDuplicates(List<RfidProperties> rfids)
+    {
+        final int setSize = rfids.stream().map(RfidProperties::getId).collect(Collectors.toSet()).size();
 
-        document.setDocumentFilter(new DocumentFilter() {
-            @Override
-            public void replace(DocumentFilter.FilterBypass fb, int offset,
-                                int length, String text, AttributeSet attrs)
-                    throws BadLocationException {
-                String string = fb.getDocument().getText(0,
-                        fb.getDocument().getLength())
-                        + text;
-
-                String pattern ="O{1}[0-9]{1,3}";
-                if(string.length() > 1 && !Pattern.matches(pattern, string)){
-                    return;
-                }
-                if (string.length() <= limit)
-                    super.replace(fb, offset, length, text, attrs);
-            }
-
-            @Override
-            public void remove(FilterBypass fb, int offset, int length) throws BadLocationException {
-                String s= fb.getDocument().getText(0, fb.getDocument().getLength());
-                if(s.equals("O")){
-                    return;
-                }
-                super.remove(fb, offset, length);
-            }
-        });
-
+        return setSize < rfids.size();
     }
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -123,7 +161,6 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
         lblTitleTable.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblTitleTable.setText("Bảng cấu hình thuộc tính thẻ RFID");
-        lblTitleTable.setToolTipText("");
         getContentPane().add(lblTitleTable, java.awt.BorderLayout.PAGE_START);
 
         btnDone.setText("Done");
@@ -148,7 +185,6 @@ public class RfidConfigPanel extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     public static class RfidPropTableModel extends AbstractTableModel{
-
         private final List<RfidProperties> rfidPropList;
 
         public RfidPropTableModel(List<RfidProperties> rfidProperties) {
@@ -211,7 +247,6 @@ public class RfidConfigPanel extends javax.swing.JFrame {
             return rfidPropList;
         }
 
-
         @Override
         public Object getValueAt(int rowIndex, int columnIndex) {
             switch (columnIndex) {
@@ -234,24 +269,32 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
             switch (columnIndex) {
                 case 0:
-                    rfidPropList.get(rowIndex).setId((String) aValue);
-                    fireTableRowsUpdated(rowIndex, rowIndex);
+                    rfidPropList.get(rowIndex).setId(Integer.parseInt((String) aValue));
+                    fireTableRowsUpdated(rowIndex, columnIndex);
                     break;
                 case 1:
                     rfidPropList.get(rowIndex).setExtraCards((Boolean) aValue);
-                    fireTableRowsUpdated(rowIndex, rowIndex);
+                    fireTableRowsUpdated(rowIndex, columnIndex);
                     break;
                 case 2:
                     rfidPropList.get(rowIndex).setExConnection((Boolean) aValue);
-                    fireTableRowsUpdated(rowIndex, rowIndex);
+                    fireTableRowsUpdated(rowIndex, columnIndex);
                     break;
                 case 3:
-                    rfidPropList.get(rowIndex).setStopTime(Integer.parseInt((String) aValue));
-                    fireTableRowsUpdated(rowIndex, rowIndex);
+                    if(!aValue.equals("")){
+                        rfidPropList.get(rowIndex).setStopTime(Integer.parseInt((String) aValue));
+                    }else {
+                        rfidPropList.get(rowIndex).setStopTime(0);
+                    }
+                    fireTableRowsUpdated(rowIndex, columnIndex);
                     break;
                 case 4:
-                    rfidPropList.get(rowIndex).setConnWaitingTime(Integer.parseInt((String) aValue));
-                    fireTableRowsUpdated(rowIndex, rowIndex);
+                    if(!aValue.equals("")){
+                        rfidPropList.get(rowIndex).setConnWaitingTime(Integer.parseInt((String) aValue));
+                    }else {
+                        rfidPropList.get(rowIndex).setConnWaitingTime(0);
+                    }
+                    fireTableRowsUpdated(rowIndex, columnIndex);
                     break;
             }
         }

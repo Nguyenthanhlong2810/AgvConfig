@@ -303,7 +303,7 @@ public class ConfigurationFrame extends javax.swing.JFrame {
         configurationRfidPanel =  new JPanel();
         configurationRfidPanel.setLayout(new GridBagLayout());
         GridBagConstraints g = new GridBagConstraints();
-        JLabel lblConfig = new JLabel("Config Rfid: ");
+        JLabel lblConfig = new JLabel("Config Rfid ");
         g.weightx = 1;
         configurationRfidPanel.add(lblConfig,g);
         g.gridx = 1;
