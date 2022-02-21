@@ -104,19 +104,7 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
         });
 
         btnSaveConfigs.addActionListener(e -> {
-            if (currentFile != null) {
-                if (currentFile.exists()) {
-                    int status = JOptionPane.showConfirmDialog(this, "Override current file?",
-                            "Save config", JOptionPane.YES_NO_CANCEL_OPTION);
-                    if (status == JOptionPane.YES_OPTION) {
-                        saveToFile(currentFile);
-                    } else if (status == JOptionPane.NO_OPTION) {
-                        saveToFile(null);
-                    }
-                    return;
-                }
-            }
-            saveToFile(null);
+            saveConfigs();
         });
 
         cbxPort.addPopupMenuListener(new PopupMenuListener() {
@@ -189,6 +177,7 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
 
         tgbConnect.addItemListener(e -> {
             boolean checked = e.getStateChange() == ItemEvent.SELECTED;
+            cbxPort.setEnabled(!checked);
             tgbConnect.setText(checked ? "Disconnect" : "Connect");
             btnConfigure.setEnabled(checked);
         });
@@ -199,7 +188,7 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
             }
             if (!saved) {
                 JOptionPane.showMessageDialog(this, "Need to save file before configure");
-                if (!saveToFile(currentFile)) {
+                if (!saveConfigs()) {
                     return;
                 }
             }
@@ -248,6 +237,22 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
             rfidConfigPanel.setVisible(true);
         });
 
+    }
+
+    public boolean saveConfigs() {
+        if (currentFile != null) {
+            if (currentFile.exists()) {
+                int status = JOptionPane.showConfirmDialog(this, "Override current file?",
+                        "Save config", JOptionPane.YES_NO_CANCEL_OPTION);
+                if (status == JOptionPane.YES_OPTION) {
+                    return saveToFile(currentFile);
+                } else if (status == JOptionPane.NO_OPTION) {
+                    return saveToFile(null);
+                }
+                return false;
+            }
+        }
+        return saveToFile(null);
     }
 
     private void handleError(Exception ex) {
