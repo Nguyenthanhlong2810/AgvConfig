@@ -1,4 +1,4 @@
-package com.aubot.agv;
+package com.aubot.agv.components;
 
 import com.aubot.agv.attributes.Attribute;
 

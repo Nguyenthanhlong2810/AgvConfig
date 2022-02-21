@@ -7,13 +7,16 @@
 package com.aubot.agv;
 
 import com.aubot.agv.attributes.*;
+import com.aubot.agv.components.CheckConfigPanel;
+import com.aubot.agv.components.ConfigurationPanel;
+import com.aubot.agv.components.NumberConfigPanel;
+import com.aubot.agv.components.SelectionConfigPanel;
 import com.aubot.agv.ulti.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import java.lang.reflect.Type;
 import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;

@@ -3,10 +3,9 @@ package com.aubot.agv;/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 
-import com.aubot.agv.attributes.AgvAttribute;
-import com.aubot.agv.attributes.AttributeFactory;
 import com.aubot.agv.attributes.RfidMapAttribute;
 import com.aubot.agv.attributes.RfidProperties;
+import com.aubot.agv.components.ConfigurationPanel;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
