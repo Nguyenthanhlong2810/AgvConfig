@@ -30,9 +30,7 @@ public class SerialCommunication implements HalfDuplexCommunication {
     while ((nread = port.bytesAvailable()) < required) {
       try {
         Thread.sleep(10);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      } catch (InterruptedException ignored) {}
       cycle++;
       if (cycle >= 255) {
         throw new IOException("Request timed out");

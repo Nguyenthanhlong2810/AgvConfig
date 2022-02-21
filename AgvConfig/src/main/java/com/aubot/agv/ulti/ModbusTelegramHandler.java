@@ -224,4 +224,13 @@ public class ModbusTelegramHandler implements TelegramHandler {
         }
         return crc;
     }
+
+    @Override
+    public int getResponseRequired(HalfDuplexCommunication.Direction dir) {
+        if (dir == HalfDuplexCommunication.Direction.READ) {
+            return attribute.getRegisterCount() * 2 + 5;
+        } else {
+            return 8;
+        }
+    }
 }

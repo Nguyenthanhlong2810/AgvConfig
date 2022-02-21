@@ -7,8 +7,8 @@ import java.util.List;
 
 public class SelectionConfigPanel extends ConfigurationPanel {
 
-  public SelectionConfigPanel(Attribute<Object> attribute, List<Object> options) {
-    super(attribute, new JComboBox<>());
+  public SelectionConfigPanel(PropertiesChangeListener listener, Attribute<Object> attribute, List<Object> options) {
+    super(listener, attribute, new JComboBox<>());
     getEditorComponent().addItem(options);
   }
 
@@ -18,8 +18,10 @@ public class SelectionConfigPanel extends ConfigurationPanel {
   }
 
   @Override
-  public void editorToAttribute() {
+  public boolean editorToAttribute() {
     attribute.setValue(getEditorComponent().getSelectedItem());
+
+    return true;
   }
 
   @Override

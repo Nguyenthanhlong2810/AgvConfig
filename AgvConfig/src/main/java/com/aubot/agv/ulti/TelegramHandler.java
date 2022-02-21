@@ -28,4 +28,6 @@ public interface TelegramHandler {
      * @throws TelegramException if not match
      */
     boolean matchRequest(byte[] response) throws IOException;
+
+    int getResponseRequired(HalfDuplexCommunication.Direction dir);
 }

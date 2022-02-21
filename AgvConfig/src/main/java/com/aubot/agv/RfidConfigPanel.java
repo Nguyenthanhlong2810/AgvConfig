@@ -22,25 +22,28 @@ import java.util.stream.Collectors;
  *
  * @author long2
  */
-public class RfidConfigPanel extends javax.swing.JFrame {
+public class RfidConfigPanel extends JDialog {
     public static final int RFID_ID_COLUMN = 0;
     public static final int EXTRA_CARD_COLUMN = 1;
     public static final int EX_CONNECT_COLUMN = 2;
     public static final int STOP_TIME_COLUMN = 3;
     public static final int TIME_WAIT_COLUMN = 4;
-    List<RfidProperties> rfidPropertiesList = new ArrayList<>();
     private RfidPropTableModel tableModel;
     private RfidMapAttribute rfidMapAttribute;
     private JPopupMenu pm;
     private int selectedRow = -1;
+    private final ConfigurationPanel.PropertiesChangeListener listener;
     /**
      * Creates new form MainConfig
      */
-    public RfidConfigPanel() {
+    public RfidConfigPanel(JFrame parent, ConfigurationPanel.PropertiesChangeListener listener) {
+        super(parent, true);
+        this.listener = listener;
         initComponents();
         setTableComponents();
         setTableEditor();
         createPopupMenu();
+        this.setTitle("RFID MAP CONFIGURATION - AUBOT");
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         this.setSize(600,400);
@@ -54,7 +57,7 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
     private void setTableComponents() {
         lblTitleTable.setFont(new Font("Serif", Font.PLAIN, 20));
-        tableModel = new RfidPropTableModel(rfidPropertiesList);
+        tableModel = new RfidPropTableModel(new ArrayList<>());
         tblRfidProp.setModel(tableModel);
         tblRfidProp.setShowGrid(true);
 
@@ -64,6 +67,7 @@ public class RfidConfigPanel extends javax.swing.JFrame {
                     tableModel.addRfidProperty(new RfidProperties());
                 }
             }
+            listener.onPropertiesChanged(rfidMapAttribute);
         });
 
         btnDone.addActionListener(l -> {
@@ -73,14 +77,15 @@ public class RfidConfigPanel extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this,"Duplicate RFID!","Duplicate RFID",JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            rfidProperties.remove(rfidProperties.size()-1);
-            rfidMapAttribute = (RfidMapAttribute) AttributeFactory.createAttribute(AgvAttribute.RFID_MAP);
-            if (rfidMapAttribute == null){
-                return;
-            }
-            rfidMapAttribute.setValue(rfidProperties);
-
-            this.dispose();
+//            rfidProperties.remove(rfidProperties.size()-1);
+//            rfidMapAttribute = (RfidMapAttribute) AttributeFactory.createAttribute(AgvAttribute.RFID_MAP);
+//            if (rfidMapAttribute == null){
+//                return;
+//            }
+//            rfidMapAttribute.setValue(rfidProperties);
+//
+//            this.dispose();
+            this.setVisible(false);
         });
 
         tblRfidProp.addMouseListener(new MouseAdapter() {
@@ -122,23 +127,24 @@ public class RfidConfigPanel extends javax.swing.JFrame {
     }
 
     private void removeRfid(int selectedRow){
-        rfidPropertiesList.remove(selectedRow);
-        if(rfidPropertiesList.size() == 0){
-            tableModel.addRfidProperty(new RfidProperties());
-        }
-        tableModel.fireTableDataChanged();
+        tableModel.removeRfidProperty(selectedRow);
     }
 
     private void duplicateRfid(int selectedRow){
-        RfidProperties rp = rfidPropertiesList.get(selectedRow);
+        RfidProperties rp = tableModel.rfidPropList.get(selectedRow);
         RfidProperties dupRfid = new RfidProperties(rp.getId(),rp.isExtraCards(),rp.isExConnection(),rp.getStopTime(),rp.getConnWaitingTime());
-        rfidPropertiesList.add(dupRfid);
-        tableModel.fireTableDataChanged();
+        tableModel.addRfidProperty(dupRfid);
     }
 
 
-    public RfidMapAttribute getRfidMapAttribute(){
-        return rfidMapAttribute;
+    public List<RfidProperties> getRfidMapAttributeValue(){
+        List<RfidProperties> rfids = new ArrayList<>(tableModel.rfidPropList);
+        rfids.remove(rfids.size() - 1);
+        return rfids;
+    }
+
+    public void setRfidMapAttributeValue(List<RfidProperties> propsList) {
+        tableModel.setRfidPropList(propsList);
     }
 
     public boolean findDuplicates(List<RfidProperties> rfids)
@@ -157,11 +163,11 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         scrollTablePanel = new javax.swing.JScrollPane();
         tblRfidProp = new javax.swing.JTable();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
 
         lblTitleTable.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblTitleTable.setText("Bảng cấu hình thuộc tính thẻ RFID");
-        getContentPane().add(lblTitleTable, java.awt.BorderLayout.PAGE_START);
+//        getContentPane().add(lblTitleTable, java.awt.BorderLayout.PAGE_START);
 
         btnDone.setText("Done");
         buttonPanel.add(btnDone);
@@ -185,7 +191,7 @@ public class RfidConfigPanel extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     public static class RfidPropTableModel extends AbstractTableModel{
-        private final List<RfidProperties> rfidPropList;
+        private List<RfidProperties> rfidPropList;
 
         public RfidPropTableModel(List<RfidProperties> rfidProperties) {
             this.rfidPropList = rfidProperties;
@@ -219,15 +225,15 @@ public class RfidConfigPanel extends javax.swing.JFrame {
         public String getColumnName(int column) {
             switch (column) {
                 case 0:
-                    return "Mã thẻ";
+                    return "RFID";
                 case 1:
-                    return "Có thẻ phụ";
+                    return "Sub ID?";
                 case 2:
-                    return "Có kết nối ngoài";
+                    return "Connection Available";
                 case 3:
-                    return "Thời gian dừng";
+                    return "Stop time";
                 case 4:
-                    return "Thời gian đợi kết nối";
+                    return "Alarm time";
                 default:
                     return "???";
             }
@@ -238,6 +244,11 @@ public class RfidConfigPanel extends javax.swing.JFrame {
             fireTableDataChanged();
         }
 
+        public void removeRfidProperty(int index) {
+            rfidPropList.remove(index);
+            fireTableDataChanged();
+        }
+
         @Override
         public boolean isCellEditable(int rowIndex, int columnIndex) {
             return true;
@@ -245,6 +256,12 @@ public class RfidConfigPanel extends javax.swing.JFrame {
 
         public List<RfidProperties> getRfidPropList(){
             return rfidPropList;
+        }
+
+        public void setRfidPropList(List<RfidProperties> props) {
+            this.rfidPropList = props;
+            addRfidProperty(new RfidProperties());
+            fireTableDataChanged();
         }
 
         @Override

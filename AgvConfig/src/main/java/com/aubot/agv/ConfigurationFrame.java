@@ -6,15 +6,15 @@
 
 package com.aubot.agv;
 
-import com.aubot.agv.attributes.AgvAttribute;
-import com.aubot.agv.attributes.Attribute;
-import com.aubot.agv.attributes.AttributeFactory;
+import com.aubot.agv.attributes.*;
 import com.aubot.agv.ulti.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import java.lang.reflect.Type;
+import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
@@ -28,11 +28,13 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import static com.aubot.agv.attributes.AgvAttribute.RFID_MAP;
+
 /**
  *
  * @author ADMIN
  */
-public class ConfigurationFrame extends javax.swing.JFrame {
+public class ConfigurationFrame extends javax.swing.JFrame implements ConfigurationPanel.PropertiesChangeListener {
 
     private final Map<String, ConfigurationPanel> configurationPanels = new LinkedHashMap<>();
 
@@ -42,7 +44,9 @@ public class ConfigurationFrame extends javax.swing.JFrame {
 
     SerialPort port;
     JButton btnRfidConfig = new JButton("Rfid Config");
-    RfidConfigPanel rfidConfigPanel = new RfidConfigPanel();
+    RfidConfigPanel rfidConfigPanel = new RfidConfigPanel(this, this);
+    private JPanel configurationRfidPanel;
+    private boolean saved;
 
     /** Creates new form ConfigurationFrame */
     public ConfigurationFrame() {
@@ -64,7 +68,8 @@ public class ConfigurationFrame extends javax.swing.JFrame {
             int selected = fileChooser.showOpenDialog(this);
             if (selected == JFileChooser.APPROVE_OPTION) {
                 try {
-                    JsonObject configs = new Gson().fromJson(new FileReader(fileChooser.getSelectedFile()), JsonObject.class);
+                    final Gson GSON = new GsonBuilder().create();
+                    JsonObject configs = GSON.fromJson(new FileReader(fileChooser.getSelectedFile()), JsonObject.class);
                     if (configs == null) {
                         return;
                     }
@@ -82,10 +87,18 @@ public class ConfigurationFrame extends javax.swing.JFrame {
                             panel.setAttributeValue(configs.get(key).getAsInt());
                         }
                     });
+                    ArrayList<RfidProperties> rfidProps = new ArrayList<>();
+                    if (configs.keySet().contains(RFID_MAP)) {
+                        java.lang.reflect.Type listType = new TypeToken<ArrayList<RfidProperties>>(){}.getType();
+                         rfidProps = GSON.fromJson(configs.get(RFID_MAP).getAsString(), listType);
+                    }
+                    rfidConfigPanel.setRfidMapAttributeValue(rfidProps);
+
                     currentFile = fileChooser.getSelectedFile();
                     lblFileName.setText(currentFile.getName());
+                    saved = true;
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    handleError(ex);
                 }
             }
         });
@@ -139,25 +152,25 @@ public class ConfigurationFrame extends javax.swing.JFrame {
                     protected String doInBackground() throws Exception {
                         HalfDuplexCommunication hdc = new SerialCommunication(port);
                         agvDevice = new AgvDevice(hdc, new MixHandlerBuilder());
-                        try {
-                            for (ConfigurationPanel panel : configurationPanels.values()) {
-                                Attribute attr = panel.getAttribute();
-                                agvDevice.getAttribute(attr);
-                                panel.setAttributeValue(attr.getValue());
-                            }
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
-                        }
+//                        try {
+//                            for (ConfigurationPanel panel : configurationPanels.values()) {
+//                                Attribute attr = panel.getAttribute();
+//                                agvDevice.getAttribute(attr);
+//                                panel.setAttributeValue(attr.getValue());
+//                            }
+//                        } catch (IOException ex) {
+//                            ex.printStackTrace();
+//                        }
+                        agvDevice.getStatus();
 
-                        return null;
+                        return "Ready";
                     }
 
                     @Override
                     protected void done() {
                         super.done();
                         try {
-                            get();
-                            lblStatus.setText("Ready");
+                            lblStatus.setText(get());
                             lblStatus.setForeground(Color.green.darker());
                         } catch (InterruptedException | ExecutionException ex) {
                             tgbConnect.setSelected(false);
@@ -184,17 +197,27 @@ public class ConfigurationFrame extends javax.swing.JFrame {
             if (agvDevice == null) {
                 return;
             }
+            if (!saved) {
+                JOptionPane.showMessageDialog(this, "Need to save file before configure");
+                if (!saveToFile(currentFile)) {
+                    return;
+                }
+            }
             new SwingWorker<String, Integer>() {
                 @Override
                 protected String doInBackground() throws Exception {
+                    btnConfigure.setEnabled(false);
                     java.util.List<Attribute> attributes = configurationPanels.values().stream()
                             .map(ConfigurationPanel::getAttribute)
                             .filter(attr -> attr.getValue() != null)
                             .collect(Collectors.toList());
-                    Attribute attribute = rfidConfigPanel.getRfidMapAttribute();
+                    RfidMapAttribute attribute = new RfidMapAttribute();
+                    attribute.setValue(rfidConfigPanel.getRfidMapAttributeValue());
                     attributes.add(attribute);
                     for (int i = 0; i < attributes.size(); i++) {
-                        agvDevice.setAttribute(attributes.get(i));
+                        if (!agvDevice.setAttribute(attributes.get(i))) {
+                            throw new IOException("Set attribute failed: " + attribute.getName());
+                        }
                         process(Arrays.asList(i + 1, attributes.size()));
                     }
 
@@ -213,13 +236,15 @@ public class ConfigurationFrame extends javax.swing.JFrame {
                         JOptionPane.showMessageDialog(ConfigurationFrame.this, get());
                     } catch (InterruptedException | ExecutionException ex) {
                         handleError(ex);
+                    } finally {
+                        btnConfigure.setEnabled(true);
+                        processBar.setValue(0);
                     }
                 }
             }.execute();
         });
 
         btnRfidConfig.addActionListener(e -> {
-            rfidConfigPanel = new RfidConfigPanel();
             rfidConfigPanel.setVisible(true);
         });
 
@@ -230,17 +255,20 @@ public class ConfigurationFrame extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, ex.getMessage(), "ERROR", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void saveToFile(File file) {
+
+
+    private boolean saveToFile(File file) {
         if (file == null) {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileFilter(new FileNameExtensionFilter("JSON", "json"));
             fileChooser.setCurrentDirectory(currentFile);
             int selected = fileChooser.showSaveDialog(this);
             if (selected != JFileChooser.APPROVE_OPTION) {
-                return;
+                return false;
             }
             file = fileChooser.getSelectedFile();
         }
+        Gson GSON = new GsonBuilder().setPrettyPrinting().create();
         JsonObject configs = new JsonObject();
         configurationPanels.forEach((attribute, panel) -> {
             Object value = panel.getAttribute().getValue();
@@ -249,16 +277,21 @@ public class ConfigurationFrame extends javax.swing.JFrame {
             }
             configs.addProperty(attribute, panel.getAttribute().getValue().toString());
         });
+        List<RfidProperties> rfidMapAttribute = rfidConfigPanel.getRfidMapAttributeValue();
+        configs.addProperty(RFID_MAP, GSON.toJson(rfidMapAttribute));
         if (!file.getName().endsWith(".json")) {
             file = new File(file.getAbsolutePath().concat(".json"));
         }
         try (FileWriter fileWriter = new FileWriter(file)) {
-            Gson GSON = new GsonBuilder().setPrettyPrinting().create();
             GSON.toJson(configs, fileWriter);
             setCurrentFile(file);
+            setFileSavedChange(true);
+            return true;
         } catch (IOException ioException) {
-            ioException.printStackTrace();
+            handleError(ioException);
+            return false;
         }
+
     }
 
     private void setCurrentFile(File file) {
@@ -268,35 +301,35 @@ public class ConfigurationFrame extends javax.swing.JFrame {
 
     private void initAttributes() {
         configurationPanels.put(AgvAttribute.OB_DISTANCE_TRUOC,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_TRUOC), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_TRUOC), 0, 80));
         configurationPanels.put(AgvAttribute.OB_DISTANCE_CHEO,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CHEO), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CHEO), 0, 80));
         configurationPanels.put(AgvAttribute.OB_DISTANCE_CANH,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CANH), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CANH), 0, 80));
 
         configurationPanels.put(AgvAttribute.TACT_TIME,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.TACT_TIME), 0, 1000));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.TACT_TIME), 0, 1000));
         configurationPanels.put(AgvAttribute.TABLE_LENGTH,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.TABLE_LENGTH), 0, 1000));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.TABLE_LENGTH), 0, 1000));
 
         configurationPanels.put(AgvAttribute.IN_CURVE,
-                new CheckConfigPanel(AttributeFactory.createAttribute(AgvAttribute.IN_CURVE)));
+                new CheckConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.IN_CURVE)));
         configurationPanels.put(AgvAttribute.SYNC_ENABLE,
-                new CheckConfigPanel(AttributeFactory.createAttribute(AgvAttribute.SYNC_ENABLE)));
+                new CheckConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.SYNC_ENABLE)));
 
         configurationPanels.put(AgvAttribute.LOW_BATTERY_LEVEL,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.LOW_BATTERY_LEVEL), 0, 99));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.LOW_BATTERY_LEVEL), 0, 99));
         configurationPanels.put(AgvAttribute.OUT_BATTERY_LEVEL,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.OUT_BATTERY_LEVEL), 0, 99));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OUT_BATTERY_LEVEL), 0, 99));
 
         configurationPanels.put(AgvAttribute.START_VOLUME,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.START_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.START_VOLUME), 0, 80));
         configurationPanels.put(AgvAttribute.ALARM_VOLUME,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.ALARM_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.ALARM_VOLUME), 0, 80));
         configurationPanels.put(AgvAttribute.WARNING_VOLUME,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.WARNING_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.WARNING_VOLUME), 0, 80));
         configurationPanels.put(AgvAttribute.SWAP_VOLUME,
-                new NumberConfigPanel(AttributeFactory.createAttribute(AgvAttribute.SWAP_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.SWAP_VOLUME), 0, 80));
 
         configurationPanels.values().forEach(pnlConfigs::add);
 
@@ -312,6 +345,25 @@ public class ConfigurationFrame extends javax.swing.JFrame {
 
         pnlConfigs.add(configurationRfidPanel);
 
+    }
+
+    private void setFileSavedChange(boolean saved) {
+        this.saved = saved;
+        String fileName = lblFileName.getText();
+        if (saved) {
+            if (fileName.endsWith("*")) {
+                lblFileName.setText(fileName.substring(0, fileName.length() - 2));
+            }
+        } else {
+            if (!fileName.endsWith("*")) {
+                lblFileName.setText(fileName + "*");
+            }
+        }
+    }
+
+    @Override
+    public void onPropertiesChanged(Attribute attr) {
+        setFileSavedChange(false);
     }
 
     /** This method is called from within the constructor to
@@ -436,7 +488,6 @@ public class ConfigurationFrame extends javax.swing.JFrame {
     private javax.swing.JProgressBar processBar;
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JToggleButton tgbConnect;
-    private JPanel configurationRfidPanel;
     // End of variables declaration//GEN-END:variables
 
 }

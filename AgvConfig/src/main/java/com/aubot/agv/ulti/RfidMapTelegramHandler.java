@@ -20,7 +20,9 @@ public class RfidMapTelegramHandler implements TelegramHandler {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputStream.write(STX);
         byte[] data = rfidMapAttribute.encode();
-        outputStream.write((byte) (data.length + 1));
+        int length = data.length + 1;
+        outputStream.write((byte) length);
+        outputStream.write((byte) (length >> 8));
         outputStream.write(TYPE);
         outputStream.write(data);
         outputStream.write(ETX);
@@ -33,16 +35,22 @@ public class RfidMapTelegramHandler implements TelegramHandler {
         if(response[0] != STX){
             throw new IOException("STX is not match");
         }
-        if(response[1] != (n - 3)){
-            throw new IOException("Number of RFID is not match");
+        int length = (response[2] << 8) | response[1];
+        if(length != (n - 4)){
+            throw new IOException("Data length is not match");
         }
         if(response[n - 1] != ETX){
             throw new IOException("STX is not match");
         }
-        if(response[2] != TYPE){
+        if(response[3] != TYPE){
             throw new IOException("TYPE is not match");
         }
 
-        return response[3] == 1;
+        return response[4] == 1;
+    }
+
+    @Override
+    public int getResponseRequired(HalfDuplexCommunication.Direction dir) {
+        return 6;
     }
 }

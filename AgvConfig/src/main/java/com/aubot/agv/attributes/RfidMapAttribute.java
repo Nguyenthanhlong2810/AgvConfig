@@ -4,12 +4,13 @@ import com.aubot.agv.exception.TelegramException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class RfidMapAttribute extends Attribute<List<RfidProperties>> {
+public class RfidMapAttribute extends Attribute<List<RfidProperties>> implements Serializable {
 
     public RfidMapAttribute() {
         super(0, AgvAttribute.RFID_MAP, false, true);
@@ -48,7 +49,6 @@ public class RfidMapAttribute extends Attribute<List<RfidProperties>> {
 
     private byte[] convertIntToBytes(int num, int capacity) {
         byte[] bytes = new byte[capacity];
-        int offset = 0;
         for (int i = 0; i < capacity; i++) {
            bytes[i] = (byte) (num >> (i * 8));
         }

@@ -52,7 +52,7 @@ public class UInt32CellEditor extends AbstractCellEditor implements TableCellEdi
             public void replace(DocumentFilter.FilterBypass fb, int offset,
                                 int length, String text, AttributeSet attrs)
                     throws BadLocationException {
-                String pattern = "[0-9]";
+                String pattern = "[-0-9]";
                 if (!Pattern.matches(pattern, text)) {
                     return;
                 }

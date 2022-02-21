@@ -81,9 +81,9 @@ public class AgvDevice {
         TelegramHandler th = handlerBuilder.createHandler(attribute, dir);
         byte[] response;
         if (dir == HalfDuplexCommunication.Direction.READ) {
-            response = comm.communicate(th.toRequest(), attribute.getRegisterCount() * 2 + 5);
+            response = comm.communicate(th.toRequest(), th.getResponseRequired(HalfDuplexCommunication.Direction.READ));
         } else {
-            response = comm.communicate(th.toRequest(), 8);
+            response = comm.communicate(th.toRequest(), th.getResponseRequired(HalfDuplexCommunication.Direction.WRITE));
         }
 
         return th.matchRequest(response);

@@ -18,6 +18,8 @@ import java.awt.event.FocusEvent;
  */
 public abstract class ConfigurationPanel extends JPanel {
 
+    protected final PropertiesChangeListener listener;
+
     protected final Attribute<Object> attribute;
 
     protected final JComponent editorComponent;
@@ -25,7 +27,8 @@ public abstract class ConfigurationPanel extends JPanel {
     /**
      * Creates new form ConfigurationPanel
      */
-    public ConfigurationPanel(Attribute<Object> attribute, JComponent editor) {
+    public ConfigurationPanel(PropertiesChangeListener listener, Attribute<Object> attribute, JComponent editor) {
+        this.listener = listener;
         this.attribute = attribute;
         this.editorComponent = editor;
         initComponents();
@@ -43,7 +46,9 @@ public abstract class ConfigurationPanel extends JPanel {
         editor.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                editorToAttribute();
+                if (editorToAttribute()) {
+                    listener.onPropertiesChanged(attribute);
+                }
             }
         });
 
@@ -61,7 +66,7 @@ public abstract class ConfigurationPanel extends JPanel {
         }
     }
 
-    protected abstract void editorToAttribute();
+    protected abstract boolean editorToAttribute();
 
     protected abstract void attributeToEditor(Object value);
 
@@ -100,4 +105,9 @@ public abstract class ConfigurationPanel extends JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
+
+    public interface PropertiesChangeListener {
+
+        void onPropertiesChanged(Attribute attr);
+    }
 }

@@ -29,17 +29,17 @@ public class ModbusException extends TelegramException {
             case ADDRESS:
                 builder.append(String.format(template,
                         String.format("0x%02X", ModbusTelegramHandler.getAddressCode()),
-                        String.format("0x%02X", (int) realValue)));
+                        String.format("0x%02X", realValue)));
                 break;
             case FUNCTION_CODE:
                 builder.append(String.format(template,
-                        String.format("0x%02X", (int) expected),
-                        String.format("0x%02X", (int) realValue)));
+                        String.format("0x%02X", expected),
+                        String.format("0x%02X", realValue)));
                 break;
             case CRC:
                 builder.append(String.format(template,
-                        String.format("0x%04X", (int) expected),
-                        String.format("0x%04X", (int) realValue)));
+                        String.format("0x%04X", expected),
+                        String.format("0x%04X", realValue)));
                 break;
             case WRITE_ADDRESS:
             case WRONG_VALUE:

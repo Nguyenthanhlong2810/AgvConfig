@@ -3,11 +3,12 @@ package com.aubot.agv;
 import com.aubot.agv.attributes.Attribute;
 
 import javax.swing.*;
+import java.util.Objects;
 
 public class CheckConfigPanel extends ConfigurationPanel {
 
-  public CheckConfigPanel(Attribute<Object> attribute) {
-    super(attribute, new JCheckBox());
+  public CheckConfigPanel(PropertiesChangeListener listener, Attribute<Object> attribute) {
+    super(listener, attribute, new JCheckBox());
   }
 
   @Override
@@ -16,8 +17,14 @@ public class CheckConfigPanel extends ConfigurationPanel {
   }
 
   @Override
-  public void editorToAttribute() {
-    attribute.setValue(getEditorComponent().isSelected() ? 1 : 0);
+  public boolean editorToAttribute() {
+    int value = getEditorComponent().isSelected() ? 1 : 0;
+    if (!Objects.equals(attribute.getValue(), value)) {
+      attribute.setValue(value);
+      return true;
+    }
+    return false;
+
   }
 
   @Override
