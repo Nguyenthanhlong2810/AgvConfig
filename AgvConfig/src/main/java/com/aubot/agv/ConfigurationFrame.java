@@ -14,10 +14,8 @@ import com.aubot.agv.components.SelectionConfigPanel;
 import com.aubot.agv.ulti.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.formdev.flatlaf.FlatLightLaf;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.formdev.flatlaf.json.Json;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
@@ -116,11 +114,13 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
                     });
                     ArrayList<RfidProperties> rfidProps = new ArrayList<>();
                     if (configs.keySet().contains(RFID_MAP)) {
-                        java.lang.reflect.Type listType = new TypeToken<ArrayList<RfidProperties>>(){}.getType();
-                         rfidProps = GSON.fromJson(configs.get(RFID_MAP).getAsString(), listType);
+                        JsonArray rfidJsonArray = configs.get(RFID_MAP).getAsJsonArray();
+                        for (JsonElement rfid: rfidJsonArray) {
+                            RfidProperties rfidProp = GSON.fromJson(rfid,RfidProperties.class);
+                            rfidProps.add(rfidProp);
+                        }
                     }
                     rfidConfigPanel.setRfidMapAttributeValue(rfidProps);
-
                     currentFile = fileChooser.getSelectedFile();
                     lblFileName.setText(currentFile.getName());
                     saved = true;
@@ -227,9 +227,9 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
                             .map(ConfigurationPanel::getAttribute)
                             .filter(attr -> attr.getValue() != null)
                             .collect(Collectors.toList());
-//                    RfidMapAttribute attribute = new RfidMapAttribute();
-//                    attribute.setValue(rfidConfigPanel.getRfidMapAttributeValue());
-//                    attributes.add(attribute);
+                    RfidMapAttribute attribute = new RfidMapAttribute();
+                    attribute.setValue(rfidConfigPanel.getRfidMapAttributeValue());
+                    attributes.add(attribute);
                     for (int i = 0; i < attributes.size(); i++) {
                         if (!agvDevice.setAttribute(attributes.get(i))) {
                             throw new IOException("Set attribute failed: ");
