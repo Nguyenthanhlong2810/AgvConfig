@@ -1,5 +1,7 @@
 package com.aubot.agv;
 
+import com.aubot.agv.components.NumberTextField;
+
 import javax.swing.*;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
@@ -14,10 +16,10 @@ import java.util.regex.Pattern;
 
 public class UInt32CellEditor extends AbstractCellEditor implements TableCellEditor {
 
-    private JTextField textField;
+    private NumberTextField textField;
     private int limitLength;
 
-    public UInt32CellEditor(int limitLength) {
+    public UInt32CellEditor(int min, int max) {
 //        NumberFormat nf = new DecimalFormat();
         this.limitLength = limitLength;
 //        if (zeroFill) {
@@ -30,18 +32,18 @@ public class UInt32CellEditor extends AbstractCellEditor implements TableCellEdi
 //        textField.setFormatterFactory(new DefaultFormatterFactory(nft));
 //        textField.setColumns(limitLength);
         //limitCharacters(textField, limitLength);
+        textField = new NumberTextField(min, max);
     }
 
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected,
                                                  int rowIndex, int vColIndex) {
-
-        textField = new JTextField();
         textField.setText(String.valueOf(value));
-        limitCharacters(textField,limitLength);
+//        limitCharacters(textField,limitLength);
         return textField;
     }
 
     public Object getCellEditorValue() {
+        textField.validateValue();
         return textField.getText();
     }
 

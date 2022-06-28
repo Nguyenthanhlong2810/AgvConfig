@@ -37,12 +37,14 @@ public class AttributeFactory {
                 return getInstance().getDirection();
             case AgvAttribute.SPEED:
                 return getInstance().getSpeed();
-            case AgvAttribute.OB_DISTANCE_TRUOC:
+            case AgvAttribute.FRONT_DISTANCE_SENSOR:
                 return getInstance().getOBDistanceTruoc();
-            case AgvAttribute.OB_DISTANCE_CHEO:
-                return getInstance().getOBDistanceCheo();
-            case AgvAttribute.OB_DISTANCE_CANH:
-                return getInstance().getOBDistanceCanh();
+            case AgvAttribute.BACK_DISTANCE_SENSOR:
+                return getInstance().getOBDistanceSau();
+            case AgvAttribute.LEFT_DISTANCE_SENSOR:
+                return getInstance().getOBDistanceTrai();
+            case AgvAttribute.RIGHT_DISTANCE_SENSOR:
+                return getInstance().getOBDistancePhai();
             case AgvAttribute.BATTERY_REMAIN:
                 return getInstance().getBatteryRemain();
             case AgvAttribute.IS_WARNING:
@@ -116,15 +118,19 @@ public class AttributeFactory {
     }
 
     public Attribute<?> getOBDistanceTruoc() {
-        return new UInt16Attribute(4, AgvAttribute.OB_DISTANCE_TRUOC,true,true);
+        return new UInt16Attribute(4, AgvAttribute.FRONT_DISTANCE_SENSOR,true,true);
     }
 
-    public Attribute<?> getOBDistanceCheo() {
-        return new UInt16Attribute(5, AgvAttribute.OB_DISTANCE_CHEO,true,true);
+    public Attribute<?> getOBDistanceSau() {
+        return new UInt16Attribute(5, AgvAttribute.BACK_DISTANCE_SENSOR,true,true);
     }
 
-    public Attribute<?> getOBDistanceCanh() {
-        return new UInt16Attribute(6, AgvAttribute.OB_DISTANCE_CANH,true,true);
+    public Attribute<?> getOBDistanceTrai() {
+        return new UInt16Attribute(6, AgvAttribute.LEFT_DISTANCE_SENSOR,true,true);
+    }
+
+    public Attribute<?> getOBDistancePhai() {
+        return new UInt16Attribute(107, AgvAttribute.LEFT_DISTANCE_SENSOR,true,true);
     }
 
     public Attribute<?> getBatteryRemain() {

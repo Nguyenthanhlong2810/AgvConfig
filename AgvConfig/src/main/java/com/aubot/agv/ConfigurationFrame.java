@@ -16,6 +16,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
@@ -23,6 +24,10 @@ import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableColumnModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.*;
@@ -55,16 +60,35 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
     public ConfigurationFrame() {
         initComponents();
         initAttributes();
-        this.setSize(800, 500);
+        this.setSize(800, 800);
         this.setLocationRelativeTo(null);
         this.initEvents();
-        this.setTitle("AGV CONFIG - AUBOT");
+        this.setTitle("AGV R4 CONFIG - AUBOT");
         this.lblStatus.setText("");
         this.lblFileName.setText("");
         this.btnConfigure.setEnabled(false);
     }
 
     private void initEvents() {
+        btnAddLine.addActionListener(e -> {
+            RfidConfigPanel.RfidPropTableModel model = (RfidConfigPanel.RfidPropTableModel) rfidConfigPanel.getTable().getModel();
+            int count = model.getRowCount();
+//            if (count > 0) {
+//                if (model.getRfidPropList().get(count - 1).getId() == 0) {
+//                    return;
+//                }
+//            }
+            model.addRfidProperty(new RfidProperties());
+        });
+
+        btnRemoveLine.addActionListener(e -> {
+            int selectedRow = rfidConfigPanel.getTable().getSelectedRow();
+            if (selectedRow >= 0) {
+                RfidConfigPanel.RfidPropTableModel model = (RfidConfigPanel.RfidPropTableModel) rfidConfigPanel.getTable().getModel();
+                model.removeRfidProperty(selectedRow);
+            }
+        });
+
         btnLoadConfigs.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileFilter(new FileNameExtensionFilter("JSON", "json"));
@@ -143,16 +167,16 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
                     protected String doInBackground() throws Exception {
                         HalfDuplexCommunication hdc = new SerialCommunication(port);
                         agvDevice = new AgvDevice(hdc, new MixHandlerBuilder());
-//                        try {
-//                            for (ConfigurationPanel panel : configurationPanels.values()) {
-//                                Attribute attr = panel.getAttribute();
-//                                agvDevice.getAttribute(attr);
-//                                panel.setAttributeValue(attr.getValue());
-//                            }
-//                        } catch (IOException ex) {
-//                            ex.printStackTrace();
-//                        }
-                        agvDevice.getStatus();
+                        try {
+                            for (ConfigurationPanel panel : configurationPanels.values()) {
+                                Attribute attr = panel.getAttribute();
+                                agvDevice.getAttribute(attr);
+                                panel.setAttributeValue(attr.getValue());
+                            }
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+//                        agvDevice.getStatus();
 
                         return "Ready";
                     }
@@ -203,12 +227,12 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
                             .map(ConfigurationPanel::getAttribute)
                             .filter(attr -> attr.getValue() != null)
                             .collect(Collectors.toList());
-                    RfidMapAttribute attribute = new RfidMapAttribute();
-                    attribute.setValue(rfidConfigPanel.getRfidMapAttributeValue());
-                    attributes.add(attribute);
+//                    RfidMapAttribute attribute = new RfidMapAttribute();
+//                    attribute.setValue(rfidConfigPanel.getRfidMapAttributeValue());
+//                    attributes.add(attribute);
                     for (int i = 0; i < attributes.size(); i++) {
                         if (!agvDevice.setAttribute(attributes.get(i))) {
-                            throw new IOException("Set attribute failed: " + attribute.getName());
+                            throw new IOException("Set attribute failed: ");
                         }
                         process(Arrays.asList(i + 1, attributes.size()));
                     }
@@ -239,6 +263,8 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
         btnRfidConfig.addActionListener(e -> {
             rfidConfigPanel.setVisible(true);
         });
+
+        rfidConfigPanel.getTable().getModel().addTableModelListener(e -> setFileSavedChange(false));
 
     }
 
@@ -285,8 +311,9 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
             }
             configs.addProperty(attribute, panel.getAttribute().getValue().toString());
         });
-        List<RfidProperties> rfidMapAttribute = rfidConfigPanel.getRfidMapAttributeValue();
-        configs.addProperty(RFID_MAP, GSON.toJson(rfidMapAttribute));
+        JsonArray rfids = new JsonArray();
+        rfidConfigPanel.getRfidMapAttributeValue().forEach(rfid -> rfids.add(GSON.toJsonTree(rfid)));
+        configs.add(RFID_MAP, rfids);
         if (!file.getName().endsWith(".json")) {
             file = new File(file.getAbsolutePath().concat(".json"));
         }
@@ -308,20 +335,22 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
     }
 
     private void initAttributes() {
-        configurationPanels.put(AgvAttribute.OB_DISTANCE_TRUOC,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_TRUOC), 0, 80));
-        configurationPanels.put(AgvAttribute.OB_DISTANCE_CHEO,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CHEO), 0, 80));
-        configurationPanels.put(AgvAttribute.OB_DISTANCE_CANH,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OB_DISTANCE_CANH), 0, 80));
+        configurationPanels.put(AgvAttribute.FRONT_DISTANCE_SENSOR,
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.FRONT_DISTANCE_SENSOR), 0, 120));
+        configurationPanels.put(AgvAttribute.BACK_DISTANCE_SENSOR,
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.BACK_DISTANCE_SENSOR), 0, 120));
+        configurationPanels.put(AgvAttribute.LEFT_DISTANCE_SENSOR,
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.LEFT_DISTANCE_SENSOR), 0, 120));
+        configurationPanels.put(AgvAttribute.RIGHT_DISTANCE_SENSOR,
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.RIGHT_DISTANCE_SENSOR), 0, 120));
 
         configurationPanels.put(AgvAttribute.TACT_TIME,
                 new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.TACT_TIME), 0, 1000));
         configurationPanels.put(AgvAttribute.TABLE_LENGTH,
                 new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.TABLE_LENGTH), 0, 1000));
 
-        configurationPanels.put(AgvAttribute.IN_CURVE,
-                new CheckConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.IN_CURVE)));
+//        configurationPanels.put(AgvAttribute.IN_CURVE,
+//                new CheckConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.IN_CURVE)));
         configurationPanels.put(AgvAttribute.SYNC_ENABLE,
                 new CheckConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.SYNC_ENABLE)));
 
@@ -331,28 +360,48 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
                 new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.OUT_BATTERY_LEVEL), 0, 99));
 
         configurationPanels.put(AgvAttribute.START_VOLUME,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.START_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.START_VOLUME), 0, 30));
         configurationPanels.put(AgvAttribute.ALARM_VOLUME,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.ALARM_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.ALARM_VOLUME), 0, 30));
         configurationPanels.put(AgvAttribute.WARNING_VOLUME,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.WARNING_VOLUME), 0, 80));
-        configurationPanels.put(AgvAttribute.SWAP_VOLUME,
-                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.SWAP_VOLUME), 0, 80));
+                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.WARNING_VOLUME), 0, 30));
+//        configurationPanels.put(AgvAttribute.SWAP_VOLUME,
+//                new NumberConfigPanel(this, AttributeFactory.createAttribute(AgvAttribute.SWAP_VOLUME), 0, 80));
 
-        configurationPanels.values().forEach(pnlConfigs::add);
+//        configurationPanels.values().forEach(pnlConfigs::add);
 
-        configurationRfidPanel =  new JPanel();
-        configurationRfidPanel.setLayout(new GridBagLayout());
-        GridBagConstraints g = new GridBagConstraints();
-        JLabel lblConfig = new JLabel("Config Rfid ");
-        g.weightx = 1;
-        configurationRfidPanel.add(lblConfig,g);
-        g.gridx = 1;
-        g.weightx = 3;
-        configurationRfidPanel.add(btnRfidConfig,g);
+//        configurationRfidPanel = new JPanel();
+//        configurationRfidPanel.setLayout(new GridBagLayout());
+//        GridBagConstraints g = new GridBagConstraints();
+//        JLabel lblConfig = new JLabel("Config Rfid ");
+//        g.weightx = 1;
+//        configurationRfidPanel.add(lblConfig,g);
+//        g.gridx = 1;
+//        g.weightx = 3;
+//        configurationRfidPanel.add(btnRfidConfig,g);
+//
+//        pnlConfigs.add(configurationRfidPanel);
 
-        pnlConfigs.add(configurationRfidPanel);
+        pnlSensors.add(configurationPanels.get(AgvAttribute.FRONT_DISTANCE_SENSOR));
+        pnlSensors.add(configurationPanels.get(AgvAttribute.BACK_DISTANCE_SENSOR));
+        pnlSensors.add(configurationPanels.get(AgvAttribute.LEFT_DISTANCE_SENSOR));
+        pnlSensors.add(configurationPanels.get(AgvAttribute.RIGHT_DISTANCE_SENSOR));
 
+        pnlOperation.add(configurationPanels.get(AgvAttribute.TABLE_LENGTH));
+        pnlOperation.add(configurationPanels.get(AgvAttribute.TACT_TIME));
+        pnlOperation.add(configurationPanels.get(AgvAttribute.SYNC_ENABLE));
+
+        pnlBattery.add(configurationPanels.get(AgvAttribute.LOW_BATTERY_LEVEL));
+        pnlBattery.add(configurationPanels.get(AgvAttribute.OUT_BATTERY_LEVEL));
+
+        pnlSound.add(configurationPanels.get(AgvAttribute.START_VOLUME));
+        pnlSound.add(configurationPanels.get(AgvAttribute.WARNING_VOLUME));
+        pnlSound.add(configurationPanels.get(AgvAttribute.ALARM_VOLUME));
+
+        srpRfids.setViewportView(rfidConfigPanel.getTable());
+        srpRfids.addMouseWheelListener(scrollPane.getMouseWheelListeners()[0]);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(8);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(8);
     }
 
     private void setFileSavedChange(boolean saved) {
@@ -384,7 +433,7 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
     private void initComponents() {
         java.awt.GridBagConstraints gridBagConstraints;
 
-        jPanel1 = new javax.swing.JPanel();
+        pnlMenu = new javax.swing.JPanel();
         pnlConnection = new javax.swing.JPanel();
         lblPort = new javax.swing.JLabel();
         cbxPort = new javax.swing.JComboBox<>();
@@ -399,11 +448,21 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
         btnConfigure = new javax.swing.JButton();
         scrollPane = new javax.swing.JScrollPane();
         pnlConfigs = new javax.swing.JPanel();
+        pnlSensors = new javax.swing.JPanel();
+        pnlOperation = new javax.swing.JPanel();
+        pnlBattery = new javax.swing.JPanel();
+        pnlSound = new javax.swing.JPanel();
+        pnlScript = new javax.swing.JPanel();
+        pnlScriptButtons = new javax.swing.JPanel();
+        btnAddLine = new javax.swing.JButton();
+        btnRemoveLine = new javax.swing.JButton();
+        srpRfids = new javax.swing.JScrollPane();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jPanel1.setPreferredSize(new java.awt.Dimension(669, 50));
-        jPanel1.setLayout(new java.awt.GridLayout(1, 0));
+        pnlMenu.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 5, 1, 5));
+        pnlMenu.setPreferredSize(new java.awt.Dimension(669, 50));
+        pnlMenu.setLayout(new java.awt.GridLayout(1, 0));
 
         java.awt.FlowLayout flowLayout1 = new java.awt.FlowLayout(java.awt.FlowLayout.LEADING);
         flowLayout1.setAlignOnBaseline(true);
@@ -421,7 +480,7 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
         lblStatus.setText("status...");
         pnlConnection.add(lblStatus);
 
-        jPanel1.add(pnlConnection);
+        pnlMenu.add(pnlConnection);
 
         java.awt.FlowLayout flowLayout2 = new java.awt.FlowLayout(java.awt.FlowLayout.TRAILING);
         flowLayout2.setAlignOnBaseline(true);
@@ -436,11 +495,9 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
         btnSaveConfigs.setText("Save");
         pnlConfigfile.add(btnSaveConfigs);
 
+        pnlMenu.add(pnlConfigfile);
 
-        jPanel1.add(pnlConfigfile);
-
-
-        getContentPane().add(jPanel1, java.awt.BorderLayout.PAGE_START);
+        getContentPane().add(pnlMenu, java.awt.BorderLayout.PAGE_START);
 
         pnlProcess.setPreferredSize(new java.awt.Dimension(669, 40));
         pnlProcess.setLayout(new java.awt.GridBagLayout());
@@ -459,8 +516,43 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
 
         getContentPane().add(pnlProcess, java.awt.BorderLayout.PAGE_END);
 
-        pnlConfigs.setLayout(new java.awt.GridLayout(0, 2, 10, 10));
+        pnlConfigs.setLayout(new javax.swing.BoxLayout(pnlConfigs, javax.swing.BoxLayout.PAGE_AXIS));
+
+        pnlSensors.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Sensors", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 18))); // NOI18N
+        pnlSensors.setLayout(new java.awt.GridLayout(0, 2));
+        pnlConfigs.add(pnlSensors);
+
+        pnlOperation.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Operation", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 18))); // NOI18N
+        pnlOperation.setLayout(new java.awt.GridLayout(0, 3, 5, 0));
+        pnlConfigs.add(pnlOperation);
+
+        pnlBattery.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Battery", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 18))); // NOI18N
+        pnlBattery.setLayout(new java.awt.GridLayout(0, 2));
+        pnlConfigs.add(pnlBattery);
+
+        pnlSound.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Sound", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 18))); // NOI18N
+        pnlSound.setLayout(new java.awt.GridLayout(0, 2));
+        pnlConfigs.add(pnlSound);
+
+        pnlScript.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Script", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 18))); // NOI18N
+        pnlScript.setLayout(new java.awt.BorderLayout());
+
+        pnlScriptButtons.setPreferredSize(new java.awt.Dimension(100, 50));
+        pnlScriptButtons.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 1, 5));
+
+        btnAddLine.setText("Add");
+        pnlScriptButtons.add(btnAddLine);
+
+        btnRemoveLine.setText("Remove");
+        pnlScriptButtons.add(btnRemoveLine);
+
+        pnlScript.add(pnlScriptButtons, java.awt.BorderLayout.LINE_END);
+        pnlScript.add(srpRfids, java.awt.BorderLayout.CENTER);
+
+        pnlConfigs.add(pnlScript);
+
         scrollPane.setViewportView(pnlConfigs);
+
         getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
 
         pack();
@@ -481,20 +573,29 @@ public class ConfigurationFrame extends javax.swing.JFrame implements Configurat
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAddLine;
     private javax.swing.JButton btnConfigure;
     private javax.swing.JButton btnLoadConfigs;
+    private javax.swing.JButton btnRemoveLine;
     private javax.swing.JButton btnSaveConfigs;
     private javax.swing.JComboBox<String> cbxPort;
-    private javax.swing.JPanel jPanel1;
     private javax.swing.JLabel lblFileName;
     private javax.swing.JLabel lblPort;
     private javax.swing.JLabel lblStatus;
+    private javax.swing.JPanel pnlBattery;
     private javax.swing.JPanel pnlConfigfile;
     private javax.swing.JPanel pnlConfigs;
     private javax.swing.JPanel pnlConnection;
+    private javax.swing.JPanel pnlMenu;
+    private javax.swing.JPanel pnlOperation;
     private javax.swing.JPanel pnlProcess;
+    private javax.swing.JPanel pnlScript;
+    private javax.swing.JPanel pnlScriptButtons;
+    private javax.swing.JPanel pnlSensors;
+    private javax.swing.JPanel pnlSound;
     private javax.swing.JProgressBar processBar;
     private javax.swing.JScrollPane scrollPane;
+    private javax.swing.JScrollPane srpRfids;
     private javax.swing.JToggleButton tgbConnect;
     // End of variables declaration//GEN-END:variables
 

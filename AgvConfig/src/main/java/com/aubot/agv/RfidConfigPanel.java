@@ -59,15 +59,17 @@ public class RfidConfigPanel extends JDialog {
         tableModel = new RfidPropTableModel(new ArrayList<>());
         tblRfidProp.setModel(tableModel);
         tblRfidProp.setShowGrid(true);
+        tblRfidProp.getTableHeader().setReorderingAllowed(false);
+        tblRfidProp.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
 
-        tableModel.addTableModelListener(e -> {
-            if ((e.getFirstRow() + 1) == tableModel.getRowCount()) {
-                if (!tableModel.getValueAt(tableModel.getRowCount() - 1, RFID_ID_COLUMN).equals(0)) {
-                    tableModel.addRfidProperty(new RfidProperties());
-                }
-            }
-            listener.onPropertiesChanged(rfidMapAttribute);
-        });
+//        tableModel.addTableModelListener(e -> {
+//            if ((e.getFirstRow() + 1) == tableModel.getRowCount()) {
+//                if (!tableModel.getValueAt(tableModel.getRowCount() - 1, RFID_ID_COLUMN).equals(0)) {
+//                    tableModel.addRfidProperty(new RfidProperties());
+//                }
+//            }
+//            listener.onPropertiesChanged(rfidMapAttribute);
+//        });
 
         btnDone.addActionListener(l -> {
             List<RfidProperties> rfidProperties = tableModel.getRfidPropList();
@@ -87,18 +89,18 @@ public class RfidConfigPanel extends JDialog {
             this.setVisible(false);
         });
 
-        tblRfidProp.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                JTable tableModel = (JTable) e.getSource();
-                selectedRow = tableModel.rowAtPoint(e.getPoint());
-                if(e.getButton() == 3 && selectedRow >= 0){
-                    pm.show(tblRfidProp, e.getX(), e.getY());
-                }else {
-                    selectedRow = -1;
-                }
-            }
-        });
+//        tblRfidProp.addMouseListener(new MouseAdapter() {
+//            @Override
+//            public void mouseClicked(MouseEvent e) {
+//                JTable tableModel = (JTable) e.getSource();
+//                selectedRow = tableModel.rowAtPoint(e.getPoint());
+//                if(e.getButton() == 3 && selectedRow >= 0){
+//                    pm.show(tblRfidProp, e.getX(), e.getY());
+//                }else {
+//                    selectedRow = -1;
+//                }
+//            }
+//        });
     }
 
     private void setTableEditor(){
@@ -106,9 +108,9 @@ public class RfidConfigPanel extends JDialog {
         centerRenderer.setHorizontalAlignment( JLabel.CENTER );
         tblRfidProp.setDefaultRenderer(Object.class, centerRenderer);
         tblRfidProp.getColumnModel().getColumn(RFID_ID_COLUMN).setCellRenderer(new R4RfidTableCellRenderer());
-        tblRfidProp.getColumnModel().getColumn(RFID_ID_COLUMN).setCellEditor(new UInt32CellEditor(3));
-        tblRfidProp.getColumnModel().getColumn(STOP_TIME_COLUMN).setCellEditor(new UInt32CellEditor(9));
-        tblRfidProp.getColumnModel().getColumn(TIME_WAIT_COLUMN).setCellEditor(new UInt32CellEditor(9));
+        tblRfidProp.getColumnModel().getColumn(RFID_ID_COLUMN).setCellEditor(new UInt32CellEditor(0, 999));
+        tblRfidProp.getColumnModel().getColumn(STOP_TIME_COLUMN).setCellEditor(new UInt32CellEditor(-1, Integer.MAX_VALUE));
+        tblRfidProp.getColumnModel().getColumn(TIME_WAIT_COLUMN).setCellEditor(new UInt32CellEditor(-1, Integer.MAX_VALUE));
     }
 
     private void createPopupMenu(){
@@ -138,7 +140,7 @@ public class RfidConfigPanel extends JDialog {
 
     public List<RfidProperties> getRfidMapAttributeValue(){
         List<RfidProperties> rfids = new ArrayList<>(tableModel.rfidPropList);
-        rfids.remove(rfids.size() - 1);
+//        rfids.remove(rfids.size() - 1);
         return rfids;
     }
 
@@ -151,6 +153,10 @@ public class RfidConfigPanel extends JDialog {
         final int setSize = rfids.stream().map(RfidProperties::getId).collect(Collectors.toSet()).size();
 
         return setSize < rfids.size();
+    }
+
+    public JTable getTable() {
+        return tblRfidProp;
     }
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -194,7 +200,7 @@ public class RfidConfigPanel extends JDialog {
 
         public RfidPropTableModel(List<RfidProperties> rfidProperties) {
             this.rfidPropList = rfidProperties;
-            addRfidProperty(new RfidProperties());
+//            addRfidProperty(new RfidProperties());
         }
 
         @Override
@@ -230,9 +236,9 @@ public class RfidConfigPanel extends JDialog {
                 case 2:
                     return "Connection Available";
                 case 3:
-                    return "Stop time";
+                    return "Stop time (10ms)";
                 case 4:
-                    return "Alarm time";
+                    return "Alarm time (10ms)";
                 default:
                     return "???";
             }
@@ -259,7 +265,7 @@ public class RfidConfigPanel extends JDialog {
 
         public void setRfidPropList(List<RfidProperties> props) {
             this.rfidPropList = props;
-            addRfidProperty(new RfidProperties());
+//            addRfidProperty(new RfidProperties());
             fireTableDataChanged();
         }
 
@@ -285,8 +291,11 @@ public class RfidConfigPanel extends JDialog {
         public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
             switch (columnIndex) {
                 case 0:
-                    rfidPropList.get(rowIndex).setId(Integer.parseInt((String) aValue));
-                    fireTableRowsUpdated(rowIndex, columnIndex);
+                    int id = Integer.parseInt((String) aValue);
+                    if (rfidPropList.stream().map(RfidProperties::getId).noneMatch(i -> i == id)) {
+                        rfidPropList.get(rowIndex).setId(id);
+                        fireTableRowsUpdated(rowIndex, columnIndex);
+                    }
                     break;
                 case 1:
                     rfidPropList.get(rowIndex).setExtraCards((Boolean) aValue);
