@@ -36,11 +36,11 @@ public abstract class ConfigurationPanel extends JPanel {
         this.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.weightx = 0.3;
-        gbc.anchor = GridBagConstraints.WEST;
+        gbc.anchor = GridBagConstraints.CENTER;
         this.add(new JLabel(attribute.getName()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 0.7;
-        gbc.anchor = GridBagConstraints.EAST;
+        gbc.anchor = GridBagConstraints.CENTER;
         editor.setPreferredSize(new Dimension(200, 30));
         this.add(editor, gbc);
         editor.addFocusListener(new FocusAdapter() {

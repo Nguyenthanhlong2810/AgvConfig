@@ -199,7 +199,7 @@ public class AgvDevice {
      * @throws IOException Error set Distance
      */
     public boolean setOBDistanceTruoc(int distance) throws IOException {
-        return setAttributeValue(AgvAttribute.OB_DISTANCE_TRUOC,distance);
+        return setAttributeValue(AgvAttribute.FRONT_DISTANCE_SENSOR,distance);
     }
 
     /**
@@ -209,7 +209,7 @@ public class AgvDevice {
      * @throws IOException Error set Distance
      */
     public boolean setOBDistanceCheo(int distance) throws IOException {
-        return setAttributeValue(AgvAttribute.OB_DISTANCE_CHEO,distance);
+        return setAttributeValue(AgvAttribute.BACK_DISTANCE_SENSOR,distance);
     }
 
     /**
@@ -219,7 +219,7 @@ public class AgvDevice {
      * @throws IOException Error set Distance
      */
     public boolean setOBDistanceCanh(int distance) throws IOException {
-        return setAttributeValue(AgvAttribute.OB_DISTANCE_CANH,distance);
+        return setAttributeValue(AgvAttribute.LEFT_DISTANCE_SENSOR,distance);
     }
 
     /**
@@ -228,7 +228,7 @@ public class AgvDevice {
      * @throws IOException Error get OBDistanceTruoc
      */
     public int getOBDistanceTruoc() throws IOException {
-        return (int) getAttributeValue(AgvAttribute.OB_DISTANCE_TRUOC);
+        return (int) getAttributeValue(AgvAttribute.FRONT_DISTANCE_SENSOR);
     }
 
     /**
@@ -237,7 +237,7 @@ public class AgvDevice {
      * @throws IOException Error get OBDistanceCheo
      */
     public int getOBDistanceCheo() throws IOException {
-        return (int) getAttributeValue(AgvAttribute.OB_DISTANCE_CHEO);
+        return (int) getAttributeValue(AgvAttribute.BACK_DISTANCE_SENSOR);
     }
 
     /**
@@ -246,7 +246,7 @@ public class AgvDevice {
      * @throws IOException Error get OBDistanceCanh
      */
     public int getOBDistanceCanh() throws IOException {
-        return (int) getAttributeValue(AgvAttribute.OB_DISTANCE_CANH);
+        return (int) getAttributeValue(AgvAttribute.LEFT_DISTANCE_SENSOR);
     }
 
     /**

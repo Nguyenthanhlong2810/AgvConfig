@@ -16,11 +16,13 @@ public @interface AgvAttribute {
 
     String SPEED = "Speed";
 
-    String OB_DISTANCE_TRUOC = "OB Distance Truoc";
+    String FRONT_DISTANCE_SENSOR = "Front Distance Sensor";
 
-    String OB_DISTANCE_CHEO = "OB Distance Cheo";
+    String BACK_DISTANCE_SENSOR = "Back Distance Sensor";
 
-    String OB_DISTANCE_CANH = "OB Distance Canh";
+    String LEFT_DISTANCE_SENSOR = "Left Distance Sensor";
+
+    String RIGHT_DISTANCE_SENSOR = "Right Distance Sensor";
 
     String BATTERY_REMAIN = "Battery Remain";
 
